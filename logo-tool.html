@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logo 圆角导出工具</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 48px 24px;
+  }
+  .container {
+    width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    text-align: center;
+  }
+  .preview-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 320px;
+    background: repeating-conic-gradient(#1a1a1a 0% 25%, #111 0% 50%) 0 0 / 20px 20px;
+    border-radius: 12px;
+    border: 1px solid #222;
+  }
+  .preview-area canvas {
+    max-width: 280px;
+    max-height: 280px;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .control-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .control-row label {
+    font-size: 14px;
+    color: #999;
+    width: 72px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .control-row input[type="range"] {
+    flex: 1;
+    accent-color: #4a9eff;
+    height: 4px;
+  }
+  .control-row .value {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: #4a9eff;
+    width: 64px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .export-btn {
+    width: 100%;
+    padding: 14px;
+    background: #4a9eff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .export-btn:hover { background: #3a8eef; }
+  .export-btn:active { background: #2a7edf; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Logo 圆角导出</h1>
+  <div class="preview-area">
+    <canvas id="canvas"></canvas>
+  </div>
+  <div class="controls">
+    <div class="control-row">
+      <label>圆角</label>
+      <input type="range" id="radius" min="0" max="50" value="0">
+      <span class="value" id="radiusVal">0%</span>
+    </div>
+    <div class="control-row">
+      <label>缩放</label>
+      <input type="range" id="scale" min="100" max="300" value="100" step="10">
+      <span class="value" id="scaleVal">100%</span>
+    </div>
+    <div class="control-row">
+      <label>导出尺寸</label>
+      <input type="range" id="size" min="128" max="2048" value="1024" step="128">
+      <span class="value" id="sizeVal">1024px</span>
+    </div>
+    <button class="export-btn" id="exportBtn">导出 PNG</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const radiusSlider = document.getElementById('radius');
+const scaleSlider = document.getElementById('scale');
+const sizeSlider = document.getElementById('size');
+const radiusVal = document.getElementById('radiusVal');
+const scaleVal = document.getElementById('scaleVal');
+const sizeVal = document.getElementById('sizeVal');
+const exportBtn = document.getElementById('exportBtn');
+
+const img = new Image();
+img.src = 'logo.png';
+img.onload = () => draw();
+
+function draw() {
+  if (!img.complete || !img.naturalWidth) return;
+
+  const displaySize = 280;
+  canvas.width = displaySize;
+  canvas.height = displaySize;
+
+  const scale = scaleSlider.value / 100;
+  const radiusPercent = radiusSlider.value / 100;
+  const radius = (displaySize / 2) * radiusPercent;
+
+  ctx.clearRect(0, 0, displaySize, displaySize);
+
+  // Rounded rect clip
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(displaySize - radius, 0);
+  ctx.quadraticCurveTo(displaySize, 0, displaySize, radius);
+  ctx.lineTo(displaySize, displaySize - radius);
+  ctx.quadraticCurveTo(displaySize, displaySize, displaySize - radius, displaySize);
+  ctx.lineTo(radius, displaySize);
+  ctx.quadraticCurveTo(0, displaySize, 0, displaySize - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.clip();
+
+  // Draw scaled image centered
+  const scaledW = displaySize * scale;
+  const scaledH = displaySize * scale;
+  const offsetX = (displaySize - scaledW) / 2;
+  const offsetY = (displaySize - scaledH) / 2;
+  ctx.drawImage(img, offsetX, offsetY, scaledW, scaledH);
+}
+
+function exportPNG() {
+  if (!img.complete || !img.naturalWidth) return;
+
+  const expSize = parseInt(sizeSlider.value);
+  const offscreen = document.createElement('canvas');
+  offscreen.width = expSize;
+  offscreen.height = expSize;
+  const oc = offscreen.getContext('2d');
+
+  const scale = scaleSlider.value / 100;
+  const radiusPercent = radiusSlider.value / 100;
+  const radius = (expSize / 2) * radiusPercent;
+
+  oc.beginPath();
+  oc.moveTo(radius, 0);
+  oc.lineTo(expSize - radius, 0);
+  oc.quadraticCurveTo(expSize, 0, expSize, radius);
+  oc.lineTo(expSize, expSize - radius);
+  oc.quadraticCurveTo(expSize, expSize, expSize - radius, expSize);
+  oc.lineTo(radius, expSize);
+  oc.quadraticCurveTo(0, expSize, 0, expSize - radius);
+  oc.lineTo(0, radius);
+  oc.quadraticCurveTo(0, 0, radius, 0);
+  oc.closePath();
+  oc.clip();
+
+  const scaledW = expSize * scale;
+  const scaledH = expSize * scale;
+  const offsetX = (expSize - scaledW) / 2;
+  const offsetY = (expSize - scaledH) / 2;
+  oc.drawImage(img, offsetX, offsetY, scaledW, scaledH);
+
+  const link = document.createElement('a');
+  link.download = `logo-${expSize}px-r${radiusSlider.value}.png`;
+  link.href = offscreen.toDataURL('image/png');
+  link.click();
+}
+
+radiusSlider.addEventListener('input', () => { radiusVal.textContent = radiusSlider.value + '%'; draw(); });
+scaleSlider.addEventListener('input', () => { scaleVal.textContent = scaleSlider.value + '%'; draw(); });
+sizeSlider.addEventListener('input', () => { sizeVal.textContent = sizeSlider.value + 'px'; });
+exportBtn.addEventListener('click', exportPNG);
+</script>
+</body>
+</html>
